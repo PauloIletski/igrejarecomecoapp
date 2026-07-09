@@ -150,8 +150,15 @@ export function useTogglePrayer() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ prayerRequestId, identity }: { prayerRequestId: string; identity: string }) =>
-      togglePrayerRecord(prayerRequestId, identity),
+    mutationFn: ({
+      prayerRequestId,
+      identity,
+      shouldPray,
+    }: {
+      prayerRequestId: string;
+      identity: string;
+      shouldPray: boolean;
+    }) => togglePrayerRecord(prayerRequestId, identity, shouldPray),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: v1QueryKeys.prayers }),
   });
 }

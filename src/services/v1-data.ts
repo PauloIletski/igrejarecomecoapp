@@ -26,14 +26,19 @@ export type MaintenanceStatus = {
 
 export type EventRegistrationInput = {
   eventId: string;
-  name: string;
+  eventTitle: string;
+  fullName: string;
+  whatsapp: string;
   email?: string;
-  phone?: string;
 };
 
 export type PrayerRequestInput = {
   name?: string;
+  phone?: string;
+  email?: string;
   request: string;
+  isAnonymous: boolean;
+  allowPublic: boolean;
 };
 
 const visibilityMap: Partial<Record<string, VisibilityKey>> = {
@@ -90,6 +95,34 @@ function booleanValue(row: UnknownRecord, keys: string[], fallback = false) {
   return fallback;
 }
 
+function rowId(row: UnknownRecord, fallback: string) {
+  return text(row, ['id'], fallback);
+}
+
+function dayLabel(value: unknown) {
+  const days = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+  if (typeof value === 'number') {
+    return days[value] ?? 'Dia';
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isInteger(parsed)) {
+      return days[parsed] ?? value;
+    }
+    return value;
+  }
+
+  return 'Dia';
+}
+
+function timeText(value: string) {
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    return value.slice(0, 5);
+  }
+
+  return value;
+}
+
 function list(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -99,11 +132,33 @@ function list(value: unknown): string[] {
 }
 
 function dateLabel(row: UnknownRecord) {
-  return text(row, ['date_label', 'event_date_label', 'display_date', 'date'], text(row, ['created_at']));
+  const explicit = text(row, ['date_label', 'event_date_label', 'display_date', 'date']);
+  const date = explicit || text(row, ['starts_at', 'created_at']);
+  if (!date) {
+    return '';
+  }
+
+  const parsed = new Date(date);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' }).format(parsed);
+  }
+
+  return date;
 }
 
 function timeLabel(row: UnknownRecord) {
-  return text(row, ['time_label', 'start_time', 'time']);
+  const explicit = text(row, ['time_label', 'start_time', 'time']);
+  const date = explicit || text(row, ['starts_at']);
+  if (!date) {
+    return '';
+  }
+
+  const parsed = new Date(date);
+  if (!Number.isNaN(parsed.getTime())) {
+    return new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' }).format(parsed);
+  }
+
+  return date;
 }
 
 function isMissingTable(error: { code?: string; message?: string } | null) {
@@ -151,7 +206,7 @@ export async function fetchMaintenanceStatus(): Promise<MaintenanceStatus> {
 
   const row = asRecord(data);
   return {
-    enabled: booleanValue(row, ['is_enabled', 'enabled', 'published'], false),
+    enabled: booleanValue(row, ['is_active', 'is_enabled', 'enabled', 'published'], false),
     title: text(row, ['title'], 'Em manutencao'),
     message: text(row, ['message', 'description'], 'Voltamos em breve.'),
   };
@@ -164,8 +219,9 @@ export async function fetchAgendaItems(): Promise<AgendaItem[]> {
 
   const { data, error } = await supabase
     .from('agenda_items')
-    .select('*')
+    .select('id,day_of_week,start_time,end_time,title,description,location,is_active,sort_order,poster_url')
     .eq('is_active', true)
+    .order('sort_order', { ascending: true })
     .order('day_of_week', { ascending: true })
     .order('start_time', { ascending: true });
 
@@ -176,13 +232,13 @@ export async function fetchAgendaItems(): Promise<AgendaItem[]> {
     throw error;
   }
 
-  return (data ?? []).map((item): AgendaItem => {
+  return (data ?? []).map((item, index): AgendaItem => {
     const row = asRecord(item);
     return {
-      id: text(row, ['id'], crypto.randomUUID()),
+      id: rowId(row, `agenda-${index + 1}`),
       title: text(row, ['title', 'name'], 'Agenda'),
-      day: text(row, ['day_label', 'day_name', 'day_of_week'], 'Dia'),
-      time: text(row, ['start_time', 'time'], ''),
+      day: text(row, ['day_label', 'day_name']) || dayLabel(row.day_of_week),
+      time: timeText(text(row, ['start_time', 'time'])),
       place: text(row, ['place', 'location', 'address'], ''),
       kind: text(row, ['kind', 'type', 'category'], 'Culto'),
     };
@@ -196,9 +252,31 @@ export async function fetchEvents(): Promise<EventItem[]> {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*')
-    .or('status.eq.published,is_published.eq.true')
-    .order('event_date', { ascending: true });
+    .select(
+      [
+        'id',
+        'title',
+        'description',
+        'starts_at',
+        'ends_at',
+        'location',
+        'image_url',
+        'is_published',
+        'detail_page_enabled',
+        'detail_hero_image_url',
+        'detail_content',
+        'cta_label',
+        'cta_url',
+        'secondary_cta_label',
+        'secondary_cta_url',
+        'registration_form_enabled',
+        'is_paid',
+        'investment',
+        'payment_methods',
+      ].join(','),
+    )
+    .eq('is_published', true)
+    .order('starts_at', { ascending: true });
 
   if (error) {
     if (isMissingTable(error)) {
@@ -215,7 +293,34 @@ export async function fetchEventBySlug(slug: string): Promise<EventItem | undefi
     return mockEvents.find((event) => event.slug === slug);
   }
 
-  const { data, error } = await supabase.from('events').select('*').eq('slug', slug).maybeSingle();
+  const { data, error } = await supabase
+    .from('events')
+    .select(
+      [
+        'id',
+        'title',
+        'description',
+        'starts_at',
+        'ends_at',
+        'location',
+        'image_url',
+        'is_published',
+        'detail_page_enabled',
+        'detail_hero_image_url',
+        'detail_content',
+        'cta_label',
+        'cta_url',
+        'secondary_cta_label',
+        'secondary_cta_url',
+        'registration_form_enabled',
+        'is_paid',
+        'investment',
+        'payment_methods',
+      ].join(','),
+    )
+    .eq('id', slug)
+    .eq('is_published', true)
+    .maybeSingle();
   if (error) {
     if (isMissingTable(error)) {
       return mockEvents.find((event) => event.slug === slug);
@@ -229,13 +334,24 @@ export async function fetchEventBySlug(slug: string): Promise<EventItem | undefi
 function toEventItem(item: unknown): EventItem {
   const row = asRecord(item);
   return {
-    id: text(row, ['id'], crypto.randomUUID()),
+    id: rowId(row, `event-${text(row, ['starts_at', 'title'], Date.now().toString())}`),
     slug: text(row, ['slug'], text(row, ['id'])),
     title: text(row, ['title', 'name'], 'Evento'),
     date: dateLabel(row),
     time: timeLabel(row),
     place: text(row, ['place', 'location', 'address'], ''),
     description: text(row, ['description', 'summary'], ''),
+    imageUrl: text(row, ['detail_hero_image_url', 'image_url']) || undefined,
+    detailContent: text(row, ['detail_content']) || undefined,
+    detailPageEnabled: booleanValue(row, ['detail_page_enabled'], false),
+    registrationFormEnabled: booleanValue(row, ['registration_form_enabled'], false),
+    ctaLabel: text(row, ['cta_label']) || undefined,
+    ctaUrl: text(row, ['cta_url']) || undefined,
+    secondaryCtaLabel: text(row, ['secondary_cta_label']) || undefined,
+    secondaryCtaUrl: text(row, ['secondary_cta_url']) || undefined,
+    isPaid: booleanValue(row, ['is_paid'], false),
+    investment: text(row, ['investment']) || undefined,
+    paymentMethods: text(row, ['payment_methods']) || undefined,
     spots: numberValue(row, ['capacity', 'spots', 'max_registrations'], 0),
     registrations: numberValue(row, ['registrations_count', 'registration_count', 'registrations'], 0),
   };
@@ -245,9 +361,10 @@ export async function registerForEvent(input: EventRegistrationInput) {
   const client = getSupabase();
   const { error } = await client.from('event_registrations').insert({
     event_id: input.eventId,
-    name: input.name,
+    event_title: input.eventTitle,
+    full_name: input.fullName,
     email: input.email || null,
-    phone: input.phone || null,
+    whatsapp: input.whatsapp,
   });
 
   if (error) {
@@ -334,7 +451,8 @@ export async function fetchPrayers(): Promise<PrayerItem[]> {
 
   const { data, error } = await supabase
     .from('prayer_requests')
-    .select('*')
+    .select('id,name,message,is_anonymous,allow_public,status,created_at')
+    .eq('allow_public', true)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -344,13 +462,37 @@ export async function fetchPrayers(): Promise<PrayerItem[]> {
     throw error;
   }
 
-  return (data ?? []).map((item): PrayerItem => {
+  const prayerIds = (data ?? [])
+    .map((item) => text(asRecord(item), ['id']))
+    .filter(Boolean);
+  const countsByPrayerId = new Map<string, number>();
+
+  if (prayerIds.length) {
+    const { data: records, error: recordsError } = await supabase
+      .from('prayer_praying_records')
+      .select('prayer_request_id')
+      .in('prayer_request_id', prayerIds);
+
+    if (recordsError && !isMissingTable(recordsError)) {
+      throw recordsError;
+    }
+
+    for (const record of records ?? []) {
+      const prayerRequestId = text(asRecord(record), ['prayer_request_id']);
+      if (prayerRequestId) {
+        countsByPrayerId.set(prayerRequestId, (countsByPrayerId.get(prayerRequestId) ?? 0) + 1);
+      }
+    }
+  }
+
+  return (data ?? []).map((item, index): PrayerItem => {
     const row = asRecord(item);
+    const id = rowId(row, `prayer-${index + 1}`);
     return {
-      id: text(row, ['id'], crypto.randomUUID()),
+      id,
       name: booleanValue(row, ['is_anonymous', 'anonymous'], false) ? 'Anonimo' : text(row, ['name'], 'Anonimo'),
       request: text(row, ['request', 'message', 'body'], ''),
-      count: numberValue(row, ['praying_count', 'prayer_count', 'count'], 0),
+      count: countsByPrayerId.get(id) ?? numberValue(row, ['praying_count', 'prayer_count', 'count'], 0),
     };
   });
 }
@@ -358,9 +500,12 @@ export async function fetchPrayers(): Promise<PrayerItem[]> {
 export async function createPrayerRequest(input: PrayerRequestInput) {
   const client = getSupabase();
   const { error } = await client.from('prayer_requests').insert({
-    name: input.name || null,
-    request: input.request,
-    is_anonymous: !input.name,
+    name: input.isAnonymous ? null : input.name || null,
+    email: input.email || null,
+    phone: input.phone || null,
+    message: input.request,
+    is_anonymous: input.isAnonymous,
+    allow_public: input.allowPublic,
   });
 
   if (error) {
@@ -368,12 +513,18 @@ export async function createPrayerRequest(input: PrayerRequestInput) {
   }
 }
 
-export async function togglePrayerRecord(prayerRequestId: string, identity: string) {
+export async function togglePrayerRecord(prayerRequestId: string, identity: string, shouldPray: boolean) {
   const client = getSupabase();
-  const { error } = await client.from('prayer_praying_records').insert({
-    prayer_request_id: prayerRequestId,
-    identity,
-  });
+  const query = client.from('prayer_praying_records');
+  const { error } = shouldPray
+    ? await query.upsert(
+        {
+          prayer_request_id: prayerRequestId,
+          user_session_id: identity,
+        },
+        { onConflict: 'prayer_request_id,user_session_id', ignoreDuplicates: true },
+      )
+    : await query.delete().eq('prayer_request_id', prayerRequestId).eq('user_session_id', identity);
 
   if (error) {
     throw error;
@@ -389,6 +540,8 @@ export async function fetchDonation() {
     .from('tithes_offerings_methods')
     .select('*')
     .eq('is_active', true)
+    .order('is_featured', { ascending: false })
+    .order('sort_order', { ascending: true })
     .limit(1)
     .maybeSingle();
 
@@ -401,9 +554,9 @@ export async function fetchDonation() {
 
   const row = asRecord(data);
   return {
-    pixKey: text(row, ['pix_key', 'key'], mockDonation.pixKey),
-    whatsappUrl: text(row, ['whatsapp_url'], mockDonation.whatsappUrl),
-    note: text(row, ['description', 'note'], mockDonation.note),
+    pixKey: text(row, ['pix_key', 'key']),
+    whatsappUrl: text(row, ['whatsapp_url']),
+    note: text(row, ['description', 'note']),
   };
 }
 
@@ -425,13 +578,13 @@ export async function fetchLocations(): Promise<LocationItem[]> {
     throw error;
   }
 
-  return (data ?? []).map((item): LocationItem => {
+  return (data ?? []).map((item, index): LocationItem => {
     const row = asRecord(item);
     return {
-      id: text(row, ['id'], crypto.randomUUID()),
-      name: text(row, ['name', 'title'], 'Localidade'),
+      id: rowId(row, `location-${index + 1}`),
+      name: text(row, ['name', 'title', 'unit_name'], 'Localidade'),
       address: text(row, ['address'], ''),
-      schedule: text(row, ['schedule', 'opening_hours', 'service_times'], ''),
+      schedule: text(row, ['schedule', 'opening_hours', 'service_times', 'service_hours'], ''),
       mapsUrl: text(row, ['maps_url', 'map_url'], `https://maps.google.com/?q=${encodeURIComponent(text(row, ['address']))}`),
       whatsappUrl: text(row, ['whatsapp_url', 'whatsapp'], ''),
     };

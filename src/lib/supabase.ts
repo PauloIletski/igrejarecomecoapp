@@ -3,12 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 
 import { env } from '@/lib/env';
 
+const canPersistSupabaseSession = typeof globalThis.window !== 'undefined';
+
 export const supabase = env.isSupabaseConfigured
   ? createClient(env.supabaseUrl, env.supabasePublishableKey, {
       auth: {
-        storage: AsyncStorage,
-        persistSession: true,
-        autoRefreshToken: true,
+        storage: canPersistSupabaseSession ? AsyncStorage : undefined,
+        persistSession: canPersistSupabaseSession,
+        autoRefreshToken: canPersistSupabaseSession,
         detectSessionInUrl: false,
       },
       global: {

@@ -1,9 +1,14 @@
-import { Link } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Link } from "expo-router";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { ThemedText } from '@/components/themed-text';
-import { AgendaItem, AlbumItem, EventItem, PrayerItem } from '@/data/v1';
-import { ActionButton, RemoteImage, V1Card, styles as shellStyles } from '@/features/v1/shell';
+import { ThemedText } from "@/components/themed-text";
+import { AgendaItem, AlbumItem, EventItem, PrayerItem } from "@/data/v1";
+import {
+  ActionButton,
+  RemoteImage,
+  V1Card,
+  styles as shellStyles,
+} from "@/features/v1/shell";
 
 export function AgendaCard({ item }: { item: AgendaItem }) {
   return (
@@ -23,19 +28,25 @@ export function AgendaCard({ item }: { item: AgendaItem }) {
 
 export function EventCard({ event }: { event: EventItem }) {
   const left = Math.max(event.spots - event.registrations, 0);
+  const content = (
+    <V1Card>
+      {event.imageUrl ? <RemoteImage uri={event.imageUrl} /> : null}
+      <ThemedText type="smallBold">{event.title}</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        {[event.date, event.time, event.place].filter(Boolean).join(" | ")}
+      </ThemedText>
+      {event.description ? <ThemedText type="small">{event.description}</ThemedText> : null}
+      {event.spots > 0 ? <ThemedText type="code">{left} vagas restantes</ThemedText> : null}
+    </V1Card>
+  );
+
+  if (!event.detailPageEnabled) {
+    return content;
+  }
 
   return (
     <Link href={`/eventos/${event.slug}`} asChild>
-      <Pressable style={({ pressed }) => pressed && shellStyles.pressed}>
-        <V1Card>
-          <ThemedText type="smallBold">{event.title}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {event.date} | {event.time} | {event.place}
-          </ThemedText>
-          <ThemedText type="small">{event.description}</ThemedText>
-          <ThemedText type="code">{left} vagas restantes</ThemedText>
-        </V1Card>
-      </Pressable>
+      <Pressable style={({ pressed }) => pressed && shellStyles.pressed}>{content}</Pressable>
     </Link>
   );
 }
@@ -60,20 +71,27 @@ export function PrayerCard({
   prayer,
   onToggle,
   active,
+  countDelta = 0,
+  disabled = false,
 }: {
   prayer: PrayerItem;
   onToggle: () => void;
   active: boolean;
+  countDelta?: number;
+  disabled?: boolean;
 }) {
+  const count = Math.max(prayer.count + countDelta, 0);
+
   return (
     <V1Card>
       <ThemedText type="smallBold">{prayer.name}</ThemedText>
       <ThemedText type="small">{prayer.request}</ThemedText>
-      <View style={shellStyles.row}>
-        <ThemedText type="code">{prayer.count + (active ? 1 : 0)} orando</ThemedText>
+      <View style={localStyles.prayerActions}>
+        <ThemedText type="code">{count} orando</ThemedText>
         <ActionButton
-          label={active ? 'Orando' : 'Estou orando'}
+          label={active ? "Em oracao" : "Estou orando"}
           variant="primary"
+          disabled={disabled}
           onPress={onToggle}
         />
       </View>
@@ -84,5 +102,12 @@ export function PrayerCard({
 const localStyles = StyleSheet.create({
   fill: {
     flex: 1,
+  },
+  prayerActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
   },
 });

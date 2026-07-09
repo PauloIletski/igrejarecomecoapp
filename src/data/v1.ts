@@ -4,8 +4,7 @@ export type VisibilityKey =
   | 'albuns'
   | 'oracoes'
   | 'contribuir'
-  | 'localidades'
-  | 'admin';
+  | 'localidades';
 
 export type AgendaItem = {
   id: string;
@@ -24,6 +23,17 @@ export type EventItem = {
   time: string;
   place: string;
   description: string;
+  imageUrl?: string;
+  detailContent?: string;
+  detailPageEnabled: boolean;
+  registrationFormEnabled: boolean;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaUrl?: string;
+  isPaid: boolean;
+  investment?: string;
+  paymentMethods?: string;
   spots: number;
   registrations: number;
 };
@@ -60,7 +70,6 @@ export const sectionVisibility: Record<VisibilityKey, boolean> = {
   oracoes: true,
   contribuir: true,
   localidades: true,
-  admin: true,
 };
 
 export const agendaItems: AgendaItem[] = [
@@ -100,6 +109,14 @@ export const events: EventItem[] = [
     place: 'Templo sede',
     description:
       'Noite de palavra, louvor e comunhao para fortalecer familias e novos comecos.',
+    imageUrl:
+      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80',
+    detailContent: 'Inscricoes e contato disponiveis para mais informacoes.',
+    detailPageEnabled: true,
+    registrationFormEnabled: true,
+    ctaLabel: 'Contato',
+    ctaUrl: 'https://wa.me/5500000000000',
+    isPaid: false,
     spots: 120,
     registrations: 87,
   },
@@ -112,6 +129,9 @@ export const events: EventItem[] = [
     place: 'Comunidade Jardim Esperanca',
     description:
       'Mobilizacao de voluntarios para atendimento, cesta basica e cuidado pastoral.',
+    detailPageEnabled: true,
+    registrationFormEnabled: false,
+    isPaid: false,
     spots: 60,
     registrations: 34,
   },

@@ -15,16 +15,6 @@ export default function MoreScreen() {
           <ActionButton label="Localidades" href="/localidades" />
         </View>
       </V1Card>
-
-      <V1Card>
-        <ThemedText type="smallBold">Administracao</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          A V1 mobile libera apenas login e gate de permissao; painel completo segue no web.
-        </ThemedText>
-        <View style={styles.actionRow}>
-          <ActionButton label="Entrar" href="/admin/login" variant="primary" />
-        </View>
-      </V1Card>
     </V1Screen>
   );
 }

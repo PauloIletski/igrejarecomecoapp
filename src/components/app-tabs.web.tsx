@@ -14,6 +14,9 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { env } from '@/lib/env';
+
+const siteUrl = env.siteUrl || 'https://igrejarecomeco.org';
 
 export default function AppTabs() {
   return (
@@ -33,6 +36,10 @@ export default function AppTabs() {
           <TabTrigger name="mais" href="/mais" asChild>
             <TabButton>Mais</TabButton>
           </TabTrigger>
+          <TabTrigger name="albums" href="/albums" style={styles.hiddenRouteTrigger} />
+          <TabTrigger name="contribuir" href="/contribuir" style={styles.hiddenRouteTrigger} />
+          <TabTrigger name="localidades" href="/localidades" style={styles.hiddenRouteTrigger} />
+          <TabTrigger name="oracoes" href="/oracoes" style={styles.hiddenRouteTrigger} />
         </CustomTabList>
       </TabList>
     </Tabs>
@@ -66,7 +73,7 @@ export function CustomTabList(props: TabListProps) {
 
         {props.children}
 
-        <ExternalLink href="https://igrejarecomeco.org" asChild>
+        <ExternalLink href={siteUrl} asChild>
           <Pressable style={styles.externalPressable}>
             <ThemedText type="link">Site</ThemedText>
             <SymbolView
@@ -117,5 +124,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.one,
     marginLeft: Spacing.three,
+  },
+  hiddenRouteTrigger: {
+    width: 0,
+    height: 0,
+    overflow: 'hidden',
   },
 });

@@ -1,0 +1,34 @@
+project_id = "bhrflfjlcoehabedhqqy"
+
+[functions.signup-username-user]
+verify_jwt = false
+
+[functions.reset-admin-password]
+verify_jwt = true
+
+[functions.albums-galleries]
+verify_jwt = false
+
+[functions.albums-gallery-images]
+verify_jwt = false
+
+[functions.albums-download]
+verify_jwt = false
+
+[functions.albums-google-auth-start]
+verify_jwt = false
+
+[functions.albums-google-auth-callback]
+verify_jwt = false
+
+[functions.albums-google-auth-logout]
+verify_jwt = false
+
+[functions.albums-drive-folders]
+verify_jwt = false
+
+[functions.albums-next-order]
+verify_jwt = false
+
+[functions.albums-upload]
+verify_jwt = false

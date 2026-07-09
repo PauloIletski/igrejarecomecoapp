@@ -1,6 +1,6 @@
-import { Image } from 'expo-image';
-import { Link, type Href } from 'expo-router';
-import { ReactNode } from 'react';
+import { Image } from "expo-image";
+import { router, type Href } from "expo-router";
+import { ReactNode } from "react";
 import {
   Linking,
   Pressable,
@@ -9,48 +9,62 @@ import {
   View,
   type StyleProp,
   type ViewStyle,
-} from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { FloatingBackButton } from "@/components/ui/floating-back-button";
+import { BottomTabInset, MaxContentWidth, Spacing } from "@/constants/theme";
+import { useTheme } from "@/hooks/use-theme";
 
 type ScreenProps = {
   title: string;
   eyebrow?: string;
   children: ReactNode;
+  showBackButton?: boolean;
 };
 
-export function V1Screen({ title, eyebrow, children }: ScreenProps) {
+export function V1Screen({
+  title,
+  eyebrow,
+  children,
+  showBackButton,
+}: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-      contentContainerStyle={[
-        styles.content,
-        {
-          paddingTop: Math.max(insets.top, Spacing.three),
-          paddingBottom: insets.bottom + BottomTabInset + Spacing.five,
-        },
-      ]}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
-          {eyebrow ? (
-            <ThemedText type="smallBold" themeColor="textSecondary">
-              {eyebrow}
+    <>
+      {showBackButton && <FloatingBackButton />}
+      <ScrollView
+        style={[styles.scrollView, { backgroundColor: theme.background }]}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top, Spacing.three),
+            paddingBottom: insets.bottom + BottomTabInset + Spacing.five,
+          },
+        ]}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.header}>
+            {eyebrow ? (
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                {eyebrow}
+              </ThemedText>
+            ) : null}
+            <ThemedText type="subtitle" style={styles.title}>
+              {title}
             </ThemedText>
-          ) : null}
-          <ThemedText type="subtitle" style={styles.title}>
-            {title}
-          </ThemedText>
-        </View>
-        {children}
-      </SafeAreaView>
-    </ScrollView>
+          </View>
+          {children}
+        </SafeAreaView>
+      </ScrollView>
+    </>
   );
 }
 
@@ -72,7 +86,7 @@ type ActionProps = {
   href?: Href;
   url?: string;
   onPress?: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: "primary" | "secondary";
   disabled?: boolean;
 };
 
@@ -81,35 +95,48 @@ export function ActionButton({
   href,
   url,
   onPress,
-  variant = 'secondary',
+  variant = "secondary",
   disabled = false,
 }: ActionProps) {
   const theme = useTheme();
   const button = [
     styles.action,
-    variant === 'primary' && styles.actionPrimary,
-    variant !== 'primary' && { borderColor: theme.backgroundSelected },
+    variant === "primary" && styles.actionPrimary,
+    variant !== "primary" && { borderColor: theme.backgroundSelected },
     disabled && styles.disabled,
   ];
-  const text = variant === 'primary' ? styles.actionPrimaryText : undefined;
+  const text = variant === "primary" ? styles.actionPrimaryText : undefined;
 
   if (href) {
     return (
-      <Link href={href} asChild>
-        <Pressable disabled={disabled} style={({ pressed }) => [button, pressed && styles.pressed]}>
-          <ThemedText type="smallBold" style={text}>
-            {label}
-          </ThemedText>
-        </Pressable>
-      </Link>
+      <Pressable
+        disabled={disabled}
+        style={({ pressed }) => [
+          button,
+          pressed && !disabled && styles.pressed,
+        ]}
+        onPress={() => {
+          if (disabled) return;
+
+          console.log("[ActionButton href]", label, href);
+          router.push(href);
+        }}
+      >
+        <ThemedText type="smallBold" style={text}>
+          {label}
+        </ThemedText>
+      </Pressable>
     );
   }
 
   return (
     <Pressable
       disabled={disabled}
-      style={({ pressed }) => [button, pressed && styles.pressed]}
+      style={({ pressed }) => [button, pressed && !disabled && styles.pressed]}
       onPress={() => {
+        if (disabled) return;
+        console.log("[ActionButton normal] router.push:", label, href);
+
         if (onPress) {
           onPress();
           return;
@@ -117,7 +144,8 @@ export function ActionButton({
         if (url) {
           Linking.openURL(url);
         }
-      }}>
+      }}
+    >
       <ThemedText type="smallBold" style={text}>
         {label}
       </ThemedText>
@@ -136,7 +164,7 @@ export function EmptyState({ title, body }: { title: string; body: string }) {
   );
 }
 
-export function LoadingState({ label = 'Carregando...' }: { label?: string }) {
+export function LoadingState({ label = "Carregando..." }: { label?: string }) {
   return (
     <V1Card>
       <ThemedText type="smallBold">{label}</ThemedText>
@@ -145,8 +173,8 @@ export function LoadingState({ label = 'Carregando...' }: { label?: string }) {
 }
 
 export function ErrorState({
-  title = 'Nao foi possivel carregar',
-  body = 'Verifique a conexao e tente novamente.',
+  title = "Nao foi possivel carregar",
+  body = "Verifique a conexao e tente novamente.",
   onRetry,
 }: {
   title?: string;
@@ -161,14 +189,24 @@ export function ErrorState({
       </ThemedText>
       {onRetry ? (
         <View style={styles.actionRow}>
-          <ActionButton label="Tentar novamente" onPress={onRetry} variant="primary" />
+          <ActionButton
+            label="Tentar novamente"
+            onPress={onRetry}
+            variant="primary"
+          />
         </View>
       ) : null}
     </V1Card>
   );
 }
 
-export function RemoteImage({ uri, ratio = 16 / 10 }: { uri: string; ratio?: number }) {
+export function RemoteImage({
+  uri,
+  ratio = 16 / 10,
+}: {
+  uri: string;
+  ratio?: number;
+}) {
   return (
     <Image
       source={{ uri }}
@@ -184,11 +222,11 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: Spacing.three,
   },
   safeArea: {
-    width: '100%',
+    width: "100%",
     maxWidth: MaxContentWidth,
     gap: Spacing.three,
   },
@@ -204,22 +242,22 @@ export const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     gap: Spacing.two,
   },
   grid: {
     gap: Spacing.three,
   },
   image: {
-    width: '100%',
+    width: "100%",
     borderRadius: 8,
-    backgroundColor: '#d7d7d7',
+    backgroundColor: "#d7d7d7",
   },
   actionRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.two,
   },
   action: {
@@ -227,15 +265,15 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: Spacing.three,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionPrimary: {
-    backgroundColor: '#155EEF',
-    borderColor: '#155EEF',
+    backgroundColor: "#155EEF",
+    borderColor: "#155EEF",
   },
   actionPrimaryText: {
-    color: '#ffffff',
+    color: "#ffffff",
   },
   pressed: {
     opacity: 0.72,
