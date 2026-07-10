@@ -1,8 +1,10 @@
 import { Link } from "expo-router";
-import { Pressable, StyleSheet, View } from "react-native";
+import type { ReactNode } from "react";
+import { Clock, MapPin } from "lucide-react-native";
+import { Pressable, Share, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { AgendaItem, AlbumItem, EventItem, PrayerItem } from "@/data/v1";
+import { AgendaItem, EventItem, PrayerItem } from "@/data/v1";
 import {
   ActionButton,
   RemoteImage,
@@ -13,16 +15,52 @@ import {
 export function AgendaCard({ item }: { item: AgendaItem }) {
   return (
     <V1Card>
+      {item.posterUrl ? <RemoteImage uri={item.posterUrl} ratio={4 / 5} /> : null}
       <View style={shellStyles.row}>
-        <View style={localStyles.fill}>
-          <ThemedText type="smallBold">{item.title}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {item.day} | {item.time} | {item.place}
-          </ThemedText>
-        </View>
-        <ThemedText type="code">{item.kind}</ThemedText>
+        <ThemedText type="smallBold" themeColor="primary">
+          {item.kind}
+        </ThemedText>
+        <ThemedText type="code">{item.day}</ThemedText>
       </View>
+      <ThemedText type="subtitle" style={localStyles.agendaTitle}>
+        {item.title}
+      </ThemedText>
+      <InfoLine icon={<Clock size={18} color="#C49840" strokeWidth={1.8} />} text={item.time} />
+      {item.place ? <InfoLine icon={<MapPin size={18} color="#C49840" strokeWidth={1.8} />} text={item.place} /> : null}
+      {item.posterUrl ? (
+        <View style={shellStyles.actionRow}>
+          <ActionButton
+            label="Compartilhar cartaz"
+            variant="primary"
+            fullWidth
+            onPress={() => shareAgendaPoster(item)}
+          />
+        </View>
+      ) : null}
     </V1Card>
+  );
+}
+
+async function shareAgendaPoster(item: AgendaItem) {
+  if (!item.posterUrl) {
+    return;
+  }
+
+  await Share.share({
+    title: item.title,
+    url: item.posterUrl,
+    message: `${item.title}\n${item.day} as ${item.time}${item.place ? ` - ${item.place}` : ""}\n${item.posterUrl}`,
+  });
+}
+
+function InfoLine({ icon, text }: { icon: ReactNode; text: string }) {
+  return (
+    <View style={localStyles.infoLine}>
+      {icon}
+      <ThemedText type="small" themeColor="textSecondary" style={localStyles.infoText}>
+        {text}
+      </ThemedText>
+    </View>
   );
 }
 
@@ -47,22 +85,6 @@ export function EventCard({ event }: { event: EventItem }) {
   return (
     <Link href={`/eventos/${event.slug}`} asChild>
       <Pressable style={({ pressed }) => pressed && shellStyles.pressed}>{content}</Pressable>
-    </Link>
-  );
-}
-
-export function AlbumCard({ album }: { album: AlbumItem }) {
-  return (
-    <Link href={`/albums/${album.slug}`} asChild>
-      <Pressable style={({ pressed }) => pressed && shellStyles.pressed}>
-        <V1Card>
-          <RemoteImage uri={album.coverUrl} />
-          <ThemedText type="smallBold">{album.title}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {album.date} | {album.photos.length} fotos
-          </ThemedText>
-        </V1Card>
-      </Pressable>
     </Link>
   );
 }
@@ -101,6 +123,18 @@ export function PrayerCard({
 
 const localStyles = StyleSheet.create({
   fill: {
+    flex: 1,
+  },
+  agendaTitle: {
+    fontSize: 24,
+    lineHeight: 28,
+  },
+  infoLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  infoText: {
     flex: 1,
   },
   prayerActions: {

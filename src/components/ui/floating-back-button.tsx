@@ -50,11 +50,11 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: 14,
     borderRadius: 999,
-    backgroundColor: "#155EEF",
+    backgroundColor: "#C49840",
     alignItems: "center",
     justifyContent: "center",
 
-    shadowColor: "#000",
+    shadowColor: "#0D2C45",
     shadowOpacity: 0.18,
     shadowRadius: 8,
     shadowOffset: {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   text: {
-    color: "#ffffff",
+    color: "#0D2C45",
   },
   pressed: {
     opacity: 0.72,

@@ -10,9 +10,12 @@ export type AgendaItem = {
   id: string;
   title: string;
   day: string;
+  dayOfWeek: number;
   time: string;
+  startTime: string;
   place: string;
   kind: string;
+  posterUrl?: string;
 };
 
 export type EventItem = {
@@ -38,15 +41,6 @@ export type EventItem = {
   registrations: number;
 };
 
-export type AlbumItem = {
-  id: string;
-  slug: string;
-  title: string;
-  date: string;
-  coverUrl: string;
-  photos: string[];
-};
-
 export type PrayerItem = {
   id: string;
   name: string;
@@ -63,6 +57,26 @@ export type LocationItem = {
   whatsappUrl: string;
 };
 
+export type TithesOfferingMethod = {
+  id: string;
+  title: string;
+  description?: string;
+  recipientName?: string;
+  pixKey?: string;
+  bankInfo?: string;
+  qrCodeUrl?: string;
+  bibleVerse?: string;
+  buttonLabel: string;
+  whatsappUrl?: string;
+  isFeatured: boolean;
+};
+
+export type DonationItem = {
+  id: string;
+  name: string;
+  priority: number;
+};
+
 export const sectionVisibility: Record<VisibilityKey, boolean> = {
   agenda: true,
   eventos: true,
@@ -77,7 +91,9 @@ export const agendaItems: AgendaItem[] = [
     id: 'agenda-domingo',
     title: 'Culto da Familia',
     day: 'Domingo',
+    dayOfWeek: 0,
     time: '18:30',
+    startTime: '18:30',
     place: 'Templo sede',
     kind: 'Culto',
   },
@@ -85,7 +101,9 @@ export const agendaItems: AgendaItem[] = [
     id: 'agenda-quarta',
     title: 'Quarta de Oracao',
     day: 'Quarta',
+    dayOfWeek: 3,
     time: '20:00',
+    startTime: '20:00',
     place: 'Templo sede',
     kind: 'Oracao',
   },
@@ -93,7 +111,9 @@ export const agendaItems: AgendaItem[] = [
     id: 'agenda-jovens',
     title: 'Encontro de Jovens',
     day: 'Sabado',
+    dayOfWeek: 6,
     time: '19:30',
+    startTime: '19:30',
     place: 'Espaco Recomeço',
     kind: 'Ministerio',
   },
@@ -137,34 +157,6 @@ export const events: EventItem[] = [
   },
 ];
 
-export const albums: AlbumItem[] = [
-  {
-    id: 'alb-1',
-    slug: 'batismo-2026',
-    title: 'Batismo 2026',
-    date: '12 jul',
-    coverUrl:
-      'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80',
-    photos: [
-      'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1515169067865-5387ec356754?auto=format&fit=crop&w=1200&q=80',
-    ],
-  },
-  {
-    id: 'alb-2',
-    slug: 'culto-da-familia',
-    title: 'Culto da Familia',
-    date: '05 jul',
-    coverUrl:
-      'https://images.unsplash.com/photo-1491438590914-bc09fcaaf77a?auto=format&fit=crop&w=1200&q=80',
-    photos: [
-      'https://images.unsplash.com/photo-1491438590914-bc09fcaaf77a?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80',
-    ],
-  },
-];
-
 export const prayers: PrayerItem[] = [
   {
     id: 'pr-1',
@@ -191,16 +183,29 @@ export const locations: LocationItem[] = [
   },
 ];
 
-export const donation = {
-  pixKey: 'doacoes@igrejarecomeco.org',
-  whatsappUrl: 'https://wa.me/5500000000000?text=Quero%20contribuir',
-  note: 'Dizimos, ofertas e campanhas especiais em um fluxo sem dados sensiveis no app.',
-};
+export const tithesOfferingMethods: TithesOfferingMethod[] = [
+  {
+    id: 'pix-recomeco',
+    title: 'Pix da igreja',
+    description: 'Contribua com dizimos e ofertas usando a chave oficial da igreja.',
+    recipientName: 'Igreja Recomeco',
+    pixKey: 'doacoes@igrejarecomeco.org',
+    bibleVerse: 'Trazei todos os dizimos a casa do tesouro. Malaquias 3:10',
+    buttonLabel: 'Copiar chave PIX',
+    whatsappUrl: 'https://wa.me/5500000000000?text=Quero%20contribuir',
+    isFeatured: true,
+  },
+];
+
+export const donationItems: DonationItem[] = [
+  { id: 'donation-arroz', name: 'Arroz', priority: 10 },
+  { id: 'donation-feijao', name: 'Feijao', priority: 10 },
+  { id: 'donation-oleo', name: 'Oleo de cozinha', priority: 9 },
+  { id: 'donation-leite', name: 'Leite em po', priority: 8 },
+  { id: 'donation-higiene', name: 'Produtos de higiene', priority: 8 },
+];
 
 export function findEvent(slug: string) {
   return events.find((event) => event.slug === slug);
 }
 
-export function findAlbum(slug: string) {
-  return albums.find((album) => album.slug === slug);
-}

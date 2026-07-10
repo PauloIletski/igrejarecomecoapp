@@ -1,20 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
+import { fetchGalleries, fetchGalleryImages } from '@/features/albums/api';
 import {
+  createDonationPledge,
   createPrayerRequest,
   fetchAgendaItems,
-  fetchAlbumBySlug,
-  fetchAlbums,
-  fetchDonation,
+  fetchDonationItems,
   fetchEventBySlug,
   fetchEvents,
   fetchLocations,
   fetchMaintenanceStatus,
   fetchPrayers,
   fetchSectionVisibility,
+  fetchTithesOfferingsMethods,
   registerForEvent,
   togglePrayerRecord,
+  type DonationPledgeInput,
   type EventRegistrationInput,
   type PrayerRequestInput,
 } from '@/services/v1-data';
@@ -25,10 +27,11 @@ export const v1QueryKeys = {
   agenda: ['agenda.items'] as const,
   events: ['events.list'] as const,
   event: (slug: string) => ['event.detail.slug', slug] as const,
-  albums: ['albums.list'] as const,
-  album: (slug: string) => ['albums.images.slug', slug] as const,
+  albums: ['albums.galleries'] as const,
+  album: (slug: string) => ['albums.images', slug] as const,
   prayers: ['prayers.list'] as const,
-  donation: ['donations.items'] as const,
+  donationItems: ['donation.items.list'] as const,
+  tithesOfferings: ['tithes.offerings.methods.list'] as const,
   locations: ['locations.list'] as const,
 };
 
@@ -115,7 +118,7 @@ export function useEventRegistration() {
 export function useAlbums() {
   return useQuery({
     queryKey: v1QueryKeys.albums,
-    queryFn: fetchAlbums,
+    queryFn: fetchGalleries,
     staleTime: 5 * 60 * 1000,
   });
 }
@@ -123,9 +126,9 @@ export function useAlbums() {
 export function useAlbum(slug: string) {
   return useQuery({
     queryKey: v1QueryKeys.album(slug),
-    queryFn: () => fetchAlbumBySlug(slug),
+    queryFn: () => fetchGalleryImages(slug),
     enabled: Boolean(slug),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 }
 
@@ -163,11 +166,28 @@ export function useTogglePrayer() {
   });
 }
 
-export function useDonation() {
+export function useTithesOfferings() {
   return useQuery({
-    queryKey: v1QueryKeys.donation,
-    queryFn: fetchDonation,
+    queryKey: v1QueryKeys.tithesOfferings,
+    queryFn: fetchTithesOfferingsMethods,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useDonationItems() {
+  return useQuery({
+    queryKey: v1QueryKeys.donationItems,
+    queryFn: fetchDonationItems,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useCreateDonationPledge() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: DonationPledgeInput) => createDonationPledge(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: v1QueryKeys.donationItems }),
   });
 }
 

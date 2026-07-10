@@ -34,6 +34,16 @@
           "imageWidth": 76
         }
       ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Permita que o app acesse suas fotos para salvar imagens dos albuns.",
+          "savePhotosPermission": "Permita que o app salve fotos dos albuns na sua galeria.",
+          "granularPermissions": [
+            "photo"
+          ]
+        }
+      ],
       "expo-sqlite"
     ],
     "experiments": {

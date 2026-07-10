@@ -1,19 +1,19 @@
 import {
   agendaItems as mockAgendaItems,
-  albums as mockAlbums,
-  donation as mockDonation,
+  donationItems as mockDonationItems,
   events as mockEvents,
   locations as mockLocations,
   prayers as mockPrayers,
   sectionVisibility as mockSectionVisibility,
+  tithesOfferingMethods as mockTithesOfferingMethods,
   type AgendaItem,
-  type AlbumItem,
+  type DonationItem,
   type EventItem,
   type LocationItem,
   type PrayerItem,
+  type TithesOfferingMethod,
   type VisibilityKey,
 } from '@/data/v1';
-import { env } from '@/lib/env';
 import { getSupabase, supabase } from '@/lib/supabase';
 
 type UnknownRecord = Record<string, unknown>;
@@ -39,6 +39,15 @@ export type PrayerRequestInput = {
   request: string;
   isAnonymous: boolean;
   allowPublic: boolean;
+};
+
+export type DonationPledgeInput = {
+  name: string;
+  phone: string;
+  email?: string;
+  items: string;
+  quantityNote?: string;
+  plannedDate?: string;
 };
 
 const visibilityMap: Partial<Record<string, VisibilityKey>> = {
@@ -115,20 +124,26 @@ function dayLabel(value: unknown) {
   return 'Dia';
 }
 
+function dayNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return Math.min(Math.max(value, 0), 6);
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isInteger(parsed)) {
+      return Math.min(Math.max(parsed, 0), 6);
+    }
+  }
+
+  return 0;
+}
+
 function timeText(value: string) {
   if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
     return value.slice(0, 5);
   }
 
   return value;
-}
-
-function list(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter((item): item is string => typeof item === 'string');
 }
 
 function dateLabel(row: UnknownRecord) {
@@ -238,9 +253,12 @@ export async function fetchAgendaItems(): Promise<AgendaItem[]> {
       id: rowId(row, `agenda-${index + 1}`),
       title: text(row, ['title', 'name'], 'Agenda'),
       day: text(row, ['day_label', 'day_name']) || dayLabel(row.day_of_week),
+      dayOfWeek: dayNumber(row.day_of_week),
       time: timeText(text(row, ['start_time', 'time'])),
+      startTime: timeText(text(row, ['start_time', 'time'])),
       place: text(row, ['place', 'location', 'address'], ''),
       kind: text(row, ['kind', 'type', 'category'], 'Culto'),
+      posterUrl: text(row, ['poster_url']) || undefined,
     };
   });
 }
@@ -372,78 +390,6 @@ export async function registerForEvent(input: EventRegistrationInput) {
   }
 }
 
-export async function fetchAlbums(): Promise<AlbumItem[]> {
-  if (!supabase || !env.isCloudinaryConfigured) {
-    return mockAlbums;
-  }
-
-  const { data, error } = await supabase.functions.invoke('albums-galleries');
-  if (error) {
-    throw error;
-  }
-
-  const folders = Array.isArray(data) ? data : list(asRecord(data).galleries);
-  return folders.map((folder, index): AlbumItem => {
-    const row = asRecord(folder);
-    const slug = text(row, ['slug'], `album-${index + 1}`);
-    const publicId = text(asRecord(row.thumbnail), ['public_id']);
-    const format = text(asRecord(row.thumbnail), ['format'], 'jpg');
-    const coverUrl = publicId ? cloudinaryImageUrl(publicId, format) : mockAlbums[0]?.coverUrl ?? '';
-
-    return {
-      id: slug,
-      slug,
-      title: slug.replace(/-/g, ' '),
-      date: text(row, ['createdAt', 'created_at'], ''),
-      coverUrl,
-      photos: coverUrl ? [coverUrl] : [],
-    };
-  });
-}
-
-export async function fetchAlbumBySlug(slug: string): Promise<AlbumItem | undefined> {
-  if (!supabase || !env.isCloudinaryConfigured) {
-    return mockAlbums.find((album) => album.slug === slug);
-  }
-
-  const { data, error } = await supabase.functions.invoke('albums-gallery-images', {
-    body: { slug },
-  });
-  if (error) {
-    throw error;
-  }
-
-  const payload = asRecord(data);
-  const rawImages: unknown[] = Array.isArray(data)
-    ? data
-    : Array.isArray(payload.images)
-      ? payload.images
-      : [];
-  const photos = rawImages
-    .map((image) => {
-      const row = asRecord(image);
-      return cloudinaryImageUrl(text(row, ['public_id']), text(row, ['format'], 'jpg'));
-    })
-    .filter(Boolean);
-
-  return {
-    id: slug,
-    slug,
-    title: slug.replace(/-/g, ' '),
-    date: '',
-    coverUrl: photos[0] ?? '',
-    photos,
-  };
-}
-
-function cloudinaryImageUrl(publicId: string, format = 'jpg') {
-  if (!publicId || !env.cloudinaryCloudName) {
-    return '';
-  }
-
-  return `https://res.cloudinary.com/${env.cloudinaryCloudName}/image/upload/f_auto,q_auto/${publicId}.${format}`;
-}
-
 export async function fetchPrayers(): Promise<PrayerItem[]> {
   if (!supabase) {
     return mockPrayers;
@@ -531,33 +477,103 @@ export async function togglePrayerRecord(prayerRequestId: string, identity: stri
   }
 }
 
-export async function fetchDonation() {
+export async function fetchTithesOfferingsMethods(): Promise<TithesOfferingMethod[]> {
   if (!supabase) {
-    return mockDonation;
+    return mockTithesOfferingMethods;
   }
 
   const { data, error } = await supabase
     .from('tithes_offerings_methods')
-    .select('*')
+    .select(
+      [
+        'id',
+        'title',
+        'description',
+        'recipient_name',
+        'pix_key',
+        'bank_info',
+        'qr_code_url',
+        'bible_verse',
+        'button_label',
+        'is_featured',
+        'is_active',
+        'sort_order',
+      ].join(','),
+    )
     .eq('is_active', true)
     .order('is_featured', { ascending: false })
-    .order('sort_order', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order('sort_order', { ascending: true });
 
   if (error) {
     if (isMissingTable(error)) {
-      return mockDonation;
+      return mockTithesOfferingMethods;
     }
     throw error;
   }
 
-  const row = asRecord(data);
+  return (data ?? []).map(toTithesOfferingMethod);
+}
+
+function toTithesOfferingMethod(item: unknown): TithesOfferingMethod {
+  const row = asRecord(item);
   return {
-    pixKey: text(row, ['pix_key', 'key']),
-    whatsappUrl: text(row, ['whatsapp_url']),
-    note: text(row, ['description', 'note']),
+    id: rowId(row, `tithe-${text(row, ['title'], Date.now().toString())}`),
+    title: text(row, ['title'], 'Metodo de contribuicao'),
+    description: text(row, ['description', 'note']) || undefined,
+    recipientName: text(row, ['recipient_name']) || undefined,
+    pixKey: text(row, ['pix_key', 'key']) || undefined,
+    bankInfo: text(row, ['bank_info']) || undefined,
+    qrCodeUrl: text(row, ['qr_code_url']) || undefined,
+    bibleVerse: text(row, ['bible_verse']) || undefined,
+    buttonLabel: text(row, ['button_label'], 'Copiar chave PIX'),
+    whatsappUrl: text(row, ['whatsapp_url']) || undefined,
+    isFeatured: booleanValue(row, ['is_featured'], false),
   };
+}
+
+export async function fetchDonationItems(): Promise<DonationItem[]> {
+  if (!supabase) {
+    return mockDonationItems;
+  }
+
+  const { data, error } = await supabase
+    .from('donation_items')
+    .select('id,name,priority,is_active')
+    .eq('is_active', true)
+    .order('priority', { ascending: false })
+    .order('name', { ascending: true });
+
+  if (error) {
+    if (isMissingTable(error)) {
+      return mockDonationItems;
+    }
+    throw error;
+  }
+
+  return (data ?? []).map((item, index): DonationItem => {
+    const row = asRecord(item);
+    return {
+      id: rowId(row, `donation-item-${index + 1}`),
+      name: text(row, ['name'], 'Item'),
+      priority: numberValue(row, ['priority'], 0),
+    };
+  });
+}
+
+export async function createDonationPledge(input: DonationPledgeInput) {
+  const client = getSupabase();
+  const { error } = await client.from('donation_pledges').insert({
+    name: input.name,
+    phone: input.phone,
+    email: input.email || null,
+    items: input.items,
+    quantity_note: input.quantityNote || null,
+    planned_date: input.plannedDate || null,
+  });
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function fetchLocations(): Promise<LocationItem[]> {

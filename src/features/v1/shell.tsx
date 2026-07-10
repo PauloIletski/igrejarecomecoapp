@@ -17,6 +17,7 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { BrandLogo } from "@/components/brand-logo";
 import { FloatingBackButton } from "@/components/ui/floating-back-button";
 import { BottomTabInset, MaxContentWidth, Spacing } from "@/constants/theme";
 import { useTheme } from "@/hooks/use-theme";
@@ -52,14 +53,21 @@ export function V1Screen({
       >
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.header}>
-            {eyebrow ? (
-              <ThemedText type="smallBold" themeColor="textSecondary">
-                {eyebrow}
+            <BrandLogo />
+            <View style={styles.headerCopy}>
+              {eyebrow ? (
+                <ThemedText
+                  type="smallBold"
+                  themeColor="primary"
+                  style={styles.eyebrow}
+                >
+                  {eyebrow}
+                </ThemedText>
+              ) : null}
+              <ThemedText type="subtitle" style={styles.title}>
+                {title}
               </ThemedText>
-            ) : null}
-            <ThemedText type="subtitle" style={styles.title}>
-              {title}
-            </ThemedText>
+            </View>
           </View>
           {children}
         </SafeAreaView>
@@ -88,6 +96,7 @@ type ActionProps = {
   onPress?: () => void;
   variant?: "primary" | "secondary";
   disabled?: boolean;
+  fullWidth?: boolean;
 };
 
 export function ActionButton({
@@ -97,12 +106,14 @@ export function ActionButton({
   onPress,
   variant = "secondary",
   disabled = false,
+  fullWidth = false,
 }: ActionProps) {
   const theme = useTheme();
   const button = [
     styles.action,
+    fullWidth && styles.actionFullWidth,
     variant === "primary" && styles.actionPrimary,
-    variant !== "primary" && { borderColor: theme.backgroundSelected },
+    variant !== "primary" && { borderColor: theme.border },
     disabled && styles.disabled,
   ];
   const text = variant === "primary" ? styles.actionPrimaryText : undefined;
@@ -118,7 +129,6 @@ export function ActionButton({
         onPress={() => {
           if (disabled) return;
 
-          console.log("[ActionButton href]", label, href);
           router.push(href);
         }}
       >
@@ -135,7 +145,6 @@ export function ActionButton({
       style={({ pressed }) => [button, pressed && !disabled && styles.pressed]}
       onPress={() => {
         if (disabled) return;
-        console.log("[ActionButton normal] router.push:", label, href);
 
         if (onPress) {
           onPress();
@@ -223,7 +232,7 @@ export const styles = StyleSheet.create({
   },
   content: {
     alignItems: "center",
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: 20,
   },
   safeArea: {
     width: "100%",
@@ -231,15 +240,32 @@ export const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   header: {
+    gap: Spacing.two,
+  },
+  headerCopy: {
     gap: Spacing.one,
+  },
+  eyebrow: {
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   title: {
     lineHeight: 38,
   },
   card: {
-    borderRadius: 8,
-    padding: Spacing.three,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#CFC2B0",
+    padding: 20,
     gap: Spacing.two,
+    shadowColor: "#0D2C45",
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    elevation: 3,
   },
   row: {
     flexDirection: "row",
@@ -252,8 +278,8 @@ export const styles = StyleSheet.create({
   },
   image: {
     width: "100%",
-    borderRadius: 8,
-    backgroundColor: "#d7d7d7",
+    borderRadius: 24,
+    backgroundColor: "#E7E2DA",
   },
   actionRow: {
     flexDirection: "row",
@@ -261,19 +287,30 @@ export const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   action: {
-    minHeight: 44,
-    borderRadius: 8,
+    minHeight: 48,
+    borderRadius: 999,
     borderWidth: 1,
     paddingHorizontal: Spacing.three,
     alignItems: "center",
     justifyContent: "center",
   },
+  actionFullWidth: {
+    width: "100%",
+  },
   actionPrimary: {
-    backgroundColor: "#155EEF",
-    borderColor: "#155EEF",
+    backgroundColor: "#C49840",
+    borderColor: "#C49840",
+    shadowColor: "#0D2C45",
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    elevation: 4,
   },
   actionPrimaryText: {
-    color: "#ffffff",
+    color: "#0D2C45",
   },
   pressed: {
     opacity: 0.72,
